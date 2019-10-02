@@ -1,0 +1,14 @@
+<?php
+
+$api = app('Dingo\Api\Routing\Router');
+$api->version('v1', ['namespace' => '$MODULE_NAMESPACE$\$STUDLY_NAME$\Http\Controllers', 'middleware' => ['cors']], function ($api) 
+{
+    $api->group(['prefix' => '$LOWER_NAME$'], function($api) {
+        $api->get('/', ['uses' => '$STUDLY_NAME$Controller@index']);
+        $api->post('/', ['uses' => '$STUDLY_NAME$Controller@store']);
+        $api->get('/all', ['uses' => '$STUDLY_NAME$Controller@all']);
+        $api->get('/{id}', ['uses' => '$STUDLY_NAME$Controller@show']);
+        $api->put('/{id}', ['uses' => '$STUDLY_NAME$Controller@update']);
+        $api->delete('/{id}', ['uses' => '$STUDLY_NAME$Controller@destroy']);
+    });
+});
