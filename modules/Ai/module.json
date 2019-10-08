@@ -1,0 +1,17 @@
+{
+    "name": "Ai",
+    "alias": "ai",
+    "description": "",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\Ai\\Providers\\AiServiceProvider",
+        "Dingo\\Api\\Provider\\LumenServiceProvider"
+    ],
+    "aliases": {},
+    "files": [
+        "start.php"
+    ],
+    "requires": []
+}

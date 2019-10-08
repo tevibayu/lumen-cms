@@ -65,3 +65,29 @@ if ( ! function_exists('access'))
 		return app('access');
 	}
 }
+
+if ( ! function_exists('mcrypt'))
+{
+    /**
+     * Encrypting/Decrypting
+     */
+    function mcrypt($string, $action = 'e')
+    {
+        $secret_key = config('crypt.secret_key');
+        $secret_id = config('crypt.secret_id');
+     
+        $output = false;
+        $encrypt_method = "AES-256-CBC";
+        $key = hash( 'sha256', $secret_key );
+        $iv = substr( hash( 'sha256', $secret_id ), 0, 16 );
+     
+        if( $action == 'e' ) {
+            $output = base64_encode( openssl_encrypt( $string, $encrypt_method, $key, 0, $iv ) );
+        }
+        else if( $action == 'd' ){
+            $output = openssl_decrypt( base64_decode( $string ), $encrypt_method, $key, 0, $iv );
+        }
+     
+        return $output;
+    }
+}

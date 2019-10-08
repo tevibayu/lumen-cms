@@ -12,8 +12,8 @@
 - [Modular](https://github.com/nWidart/laravel-modules) - View Documentation to create new module.
 - [Excel](https://github.com/Maatwebsite/Laravel-Excel)
 - [PDF](https://github.com/barryvdh/laravel-dompdf)
+- [Laravel Tinker](https://github.com/laravel/tinker)
 - artisan serve
-- artisan tinker
 - artisan route:list
 - [base_url]/new-app-key : view new APPKEY for .env
 - [Swagger API Documentation](https://github.com/swagger-api/swagger-ui) - [base_url]/api/documentation

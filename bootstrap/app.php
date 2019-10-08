@@ -119,6 +119,7 @@ $app->register(Dingo\Api\Provider\LumenServiceProvider::class);
 $app->register(\SwaggerLume\ServiceProvider::class);
 $app->register(Illuminate\Mail\MailServiceProvider::class);
 $app->register(Barryvdh\Cors\ServiceProvider::class);
+$app->register(Laravel\Tinker\TinkerServiceProvider::class);
 
 class_alias(Illuminate\Support\Facades\Storage::class, 'Storage');
 
