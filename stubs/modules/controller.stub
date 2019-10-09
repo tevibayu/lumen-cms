@@ -37,7 +37,7 @@ class $CLASS$ extends Controller
         }
 
         
-        return response()->errorInternal(); // 500
+        return $this->response()->errorInternal(); // 500
         
         // response()->errorBadRequest(); // 400
         // response()->errorForbidden(); // 403
@@ -74,7 +74,7 @@ class $CLASS$ extends Controller
         }
 
         
-        return response()->errorInternal(); // 500
+        return $this->response()->errorInternal(); // 500
     }
 
     /**
