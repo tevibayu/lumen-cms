@@ -12,8 +12,3 @@ $api->version(env('API_VERSION', 'v1'), ['namespace' => 'Modules\APIDocs\Http\Co
         });
     });
 });
-
-// Route::group(['prefix' => 'home', 'namespace' => 'Modules\Home\Http\Controllers'], function()
-// {
-//     Route::get('/{id}', 'HomeController@index');
-// });

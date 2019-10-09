@@ -3,7 +3,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <title>HarmonyPXM</title>
+    <title>LumenCMS</title>
 	  <link rel="stylesheet" type="text/css" href="{{ module_assets('APIDocs', 'css/swagger-ui.css') }}" >
     <link rel="stylesheet" type="text/css" href="{{ module_assets('APIDocs', 'css/theme-material.css') }}" >
     <link rel="stylesheet" type="text/css" href="{{ module_assets('APIDocs', 'css/sidebar.css') }}" >
@@ -36,16 +36,48 @@
         background: #fafafa;
         height: 100%;
       }
+      
+
+
+      /*
+       *  STYLE 3
+       */
+
+      .style-3::-webkit-scrollbar-track
+      {
+        -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
+        background-color: #F5F5F5;
+      }
+
+      .style-3::-webkit-scrollbar
+      {
+        width: 6px;
+        background-color: #F5F5F5;
+      }
+
+      .style-3::-webkit-scrollbar-thumb
+      {
+        background-color: #77c335;
+      }
+
+      .sidebar-nav li {
+        border-right: 1px solid #eaeaea;
+      }
+
+      .sidebar-brand {
+        border-right: hidden !important;
+      }
+
 
     </style>
   </head>
 
   <body>
     <div id="wrapper">
-      <div id="sidebar-wrapper">
+      <div id="sidebar-wrapper" class="style-3" style="overflow-x: hidden">
         <ul class="sidebar-nav">
-          <li class="sidebar-brand">
-            {{-- <a href="#">HarmonyPXM</a> --}}
+          <li class="sidebar-brand" style="border-bottom: 1px solid #fdfbf4;">
+            {{-- <a href="#">Lumen CMS</a> --}}
           </li>
 
           @if(count($menu))
@@ -129,11 +161,6 @@
 
 
       });
-
-      function scrollTod(jump){
-        var new_position = $('.'+jump).offset();
-        window.scrollTo(0,new_position.top-150);
-      }
 
 
 
@@ -222,6 +249,7 @@
       $('.topbar-wrapper a:first-child img').attr('src','{{ module_assets('APIDocs', 'img/favicon-32x32.png') }}');
       $('.topbar-wrapper a:first-child').append('<span id="menu-toggle" style="font-size:16px"></span>')
       $('.topbar-wrapper a:first-child span').html('API Documentation - Developer');
+      $('.topbar-wrapper').attr('style', 'left: 0;margin-left: -100px;');
       
 
       var checkExist = setInterval(function() {
