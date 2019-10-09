@@ -25,7 +25,12 @@ class APIDocsController extends Controller
      */
     public function index()
     {
+        $list_menu = $this->json(TRUE);
+
+        // die(print_r($list_menu));
+
         return view('apidocs::index')
+        ->withMenu($list_menu)
         ->withJson(url('/api/documentation/json'));
         
     }
@@ -34,7 +39,7 @@ class APIDocsController extends Controller
      * Display a listing of the JSON.
      * @return Response
      */
-    public function json()
+    public function json($get_menu = FALSE)
     {
 
         $modules = glob('../modules/APIDocs/Modules/*');
@@ -43,7 +48,7 @@ class APIDocsController extends Controller
         $layouts = include base_path('modules/APIDocs/Resources/views/includes/layouts.php');
         $layouts = json_decode(json_encode($layouts), true);
 
-
+        $menu = [];
         if (count($modules)) {
             foreach ($modules as $module) {
                 $module_name = last(explode('/', $module));
@@ -60,6 +65,59 @@ class APIDocsController extends Controller
             }
 
             $layouts['paths'] = $files;
+
+            if($get_menu){
+                foreach ($files as $key => $value) {
+                    if(isset($value['post'])){
+                        $tags = $value['post']['tags'][0];
+     
+                        $menu[$tags][] = [
+                            'name' => $value['post']['summary'],
+                            'url' => $value['post']['tags'][0].'/'.$value['post']['operationId']
+                        ];
+                    }
+
+                    if(isset($value['get'])){
+                        $tags = $value['get']['tags'][0];
+                        
+                        $menu[$tags][] = [
+                            'name' => $value['get']['summary'],
+                            'url' => $value['get']['tags'][0].'/'.$value['get']['operationId']
+                        ];
+                    }
+
+                    if(isset($value['put'])){
+                        $tags = $value['put']['tags'][0];
+      
+                        $menu[$tags][] = [
+                            'name' => $value['put']['summary'],
+                            'url' => $value['put']['tags'][0].'/'.$value['put']['operationId']
+                        ];
+                    }
+
+                    if(isset($value['patch'])){
+                        $tags = $value['patch']['tags'][0];
+                       
+                        $menu[$tags][] = [
+                            'name' => $value['patch']['summary'],
+                            'url' => $value['patch']['tags'][0].'/'.$value['patch']['operationId']
+                        ];
+                    }
+
+                    if(isset($value['delete'])){
+                        $tags = $value['delete']['tags'][0];
+                     
+                        $menu[$tags][] = [
+                            'name' => $value['delete']['summary'],
+                            'url' => $value['delete']['tags'][0].'/'.$value['delete']['operationId']
+                        ];
+                    }
+                    
+                }
+
+                return $menu;
+            }
+            
 
         }
 

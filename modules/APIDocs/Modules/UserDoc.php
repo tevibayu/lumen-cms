@@ -227,7 +227,7 @@ return [
 			'tags' => [
 				'Users',
 			],
-			'summary' => 'Updates a User in the store with form data',
+			'summary' => 'Update user data',
 			'description' => '',
 			'operationId' => 'updateUserWithForm',
 			'consumes' => [
@@ -306,7 +306,7 @@ return [
 			'tags' => [
 				'Users',
 			],
-			'summary' => 'Deletes a User',
+			'summary' => 'Delete user by ID',
 			'description' => '',
 			'operationId' => 'deleteUser',
 			'produces' => [

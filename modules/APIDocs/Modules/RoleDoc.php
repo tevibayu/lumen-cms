@@ -198,7 +198,7 @@ return [
 			'tags' => [
 				'Role',
 			],
-			'summary' => 'Updates a Role in the store with form data',
+			'summary' => 'Update role data',
 			'description' => '',
 			'operationId' => 'updateRoleWithForm',
 			'consumes' => [
@@ -262,7 +262,7 @@ return [
 			'tags' => [
 				'Role',
 			],
-			'summary' => 'Deletes a Role',
+			'summary' => 'Delete role by ID',
 			'description' => '',
 			'operationId' => 'deleteRole',
 			'produces' => [

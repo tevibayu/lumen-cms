@@ -192,7 +192,7 @@ return [
 			'tags' => [
 				'Permission',
 			],
-			'summary' => 'Updates a Permission in the store with form data',
+			'summary' => 'Update permission data',
 			'description' => '',
 			'operationId' => 'updatePermissionWithForm',
 			'consumes' => [
@@ -250,7 +250,7 @@ return [
 			'tags' => [
 				'Permission',
 			],
-			'summary' => 'Deletes a Permission',
+			'summary' => 'Delete permission by ID',
 			'description' => '',
 			'operationId' => 'deletePermission',
 			'produces' => [

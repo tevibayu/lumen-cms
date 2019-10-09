@@ -9,7 +9,7 @@ return [
 			'tags' => [
 				'Auth',
 			],
-			'summary' => 'Login user into the system',
+			'summary' => 'Sign in to system',
 			'description' => '',
 			'operationId' => 'authLogin',
 			'consumes' => [
@@ -64,7 +64,7 @@ return [
 			'tags' => [
 				'Auth',
 			],
-			'summary' => 'Register user into the system',
+			'summary' => 'Create a user',
 			'description' => '',
 			'operationId' => 'authRegister',
 			'produces' => [
