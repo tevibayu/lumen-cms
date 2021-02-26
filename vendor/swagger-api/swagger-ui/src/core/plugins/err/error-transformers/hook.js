@@ -1,17 +1,19 @@
 import reduce from "lodash/reduce"
 import * as NotOfType from "./transformers/not-of-type"
 import * as ParameterOneOf from "./transformers/parameter-oneof"
-import * as StripInstance from "./transformers/strip-instance"
 
 const errorTransformers = [
   NotOfType,
-  ParameterOneOf,
-  StripInstance
+  ParameterOneOf
 ]
 
-export default function transformErrors (errors, system) {
+export default function transformErrors (errors) {
+  // Dev note: unimplemented artifact where
+  // jsSpec: system.specSelectors.specJson().toJS()
+  // regardless, to be compliant with redux@4, instead of calling the store method here,
+  // jsSpec should be pass down as an argument,
   let inputs = {
-    jsSpec: system.specSelectors.specJson().toJS()
+    jsSpec: {}
   }
 
   let transformedErrors = reduce(errorTransformers, (result, transformer) => {

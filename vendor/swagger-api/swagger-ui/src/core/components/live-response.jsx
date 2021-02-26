@@ -7,7 +7,7 @@ const Headers = ( { headers } )=>{
   return (
     <div>
       <h5>Response headers</h5>
-      <pre>{headers}</pre>
+      <pre className="microlight">{headers}</pre>
     </div>)
 }
 Headers.propTypes = {
@@ -18,7 +18,7 @@ const Duration = ( { duration } ) => {
   return (
     <div>
       <h5>Request duration</h5>
-      <pre>{duration} ms</pre>
+      <pre className="microlight">{duration} ms</pre>
     </div>
   )
 }
@@ -65,17 +65,18 @@ export default class LiveResponse extends React.Component {
     const Curl = getComponent("curl")
     const ResponseBody = getComponent("responseBody")
     const returnObject = headersKeys.map(key => {
-      return <span className="headerline" key={key}> {key}: {headers[key]} </span>
+      var joinedHeaders = Array.isArray(headers[key]) ? headers[key].join() : headers[key]
+      return <span className="headerline" key={key}> {key}: {joinedHeaders} </span>
     })
     const hasHeaders = returnObject.length !== 0
 
     return (
       <div>
-        { curlRequest && <Curl request={ curlRequest }/> }
+        { curlRequest && <Curl request={ curlRequest } getConfigs={ getConfigs } /> }
         { url && <div>
             <h4>Request URL</h4>
             <div className="request-url">
-              <pre>{url}</pre>
+              <pre className="microlight">{url}</pre>
             </div>
           </div>
         }
@@ -83,13 +84,13 @@ export default class LiveResponse extends React.Component {
         <table className="responses-table live-responses-table">
           <thead>
           <tr className="responses-header">
-            <td className="col col_header response-col_status">Code</td>
-            <td className="col col_header response-col_description">Details</td>
+            <td className="col_header response-col_status">Code</td>
+            <td className="col_header response-col_description">Details</td>
           </tr>
           </thead>
           <tbody>
             <tr className="response">
-              <td className="col response-col_status">
+              <td className="response-col_status">
                 { status }
                 {
                   notDocumented ? <div className="response-undocumented">
@@ -98,7 +99,7 @@ export default class LiveResponse extends React.Component {
                                 : null
                 }
               </td>
-              <td className="col response-col_description">
+              <td className="response-col_description">
                 {
                   isError ? <span>
                               {`${response.get("name")}: ${response.get("message")}`}
@@ -110,6 +111,7 @@ export default class LiveResponse extends React.Component {
                                        contentType={ contentType }
                                        url={ url }
                                        headers={ headers }
+                                       getConfigs={ getConfigs }
                                        getComponent={ getComponent }/>
                        : null
                 }

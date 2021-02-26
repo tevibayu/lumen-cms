@@ -37,9 +37,14 @@ class ExcelFake implements Exporter, Importer
     protected $imported = [];
 
     /**
+     * @var bool
+     */
+    protected $matchByRegex = false;
+
+    /**
      * {@inheritdoc}
      */
-    public function download($export, string $fileName, string $writerType = null)
+    public function download($export, string $fileName, string $writerType = null, array $headers = [])
     {
         $this->downloads[$fileName] = $export;
 
@@ -49,7 +54,7 @@ class ExcelFake implements Exporter, Importer
     /**
      * {@inheritdoc}
      */
-    public function store($export, string $filePath, string $disk = null, string $writerType = null)
+    public function store($export, string $filePath, string $disk = null, string $writerType = null, $diskOptions = [])
     {
         if ($export instanceof ShouldQueue) {
             return $this->queue($export, $filePath, $disk, $writerType);
@@ -63,7 +68,7 @@ class ExcelFake implements Exporter, Importer
     /**
      * {@inheritdoc}
      */
-    public function queue($export, string $filePath, string $disk = null, string $writerType = null)
+    public function queue($export, string $filePath, string $disk = null, string $writerType = null, $diskOptions = [])
     {
         Queue::fake();
 
@@ -78,6 +83,17 @@ class ExcelFake implements Exporter, Importer
                 //
             }
         });
+    }
+
+    /**
+     * @param object $export
+     * @param string $writerType
+     *
+     * @return string
+     */
+    public function raw($export, string $writerType)
+    {
+        return 'RAW-CONTENTS';
     }
 
     /**
@@ -163,12 +179,34 @@ class ExcelFake implements Exporter, Importer
     }
 
     /**
+     * When asserting downloaded, stored, queued or imported, use regular expression
+     * to look for a matching file path.
+     *
+     * @return void
+     */
+    public function matchByRegex()
+    {
+        $this->matchByRegex = true;
+    }
+
+    /**
+     * When asserting downloaded, stored, queued or imported, use regular string
+     * comparison for matching file path.
+     *
+     * @return void
+     */
+    public function doNotMatchByRegex()
+    {
+        $this->matchByRegex = false;
+    }
+
+    /**
      * @param string        $fileName
      * @param callable|null $callback
      */
     public function assertDownloaded(string $fileName, $callback = null)
     {
-        Assert::assertArrayHasKey($fileName, $this->downloads, sprintf('%s is not downloaded', $fileName));
+        $fileName = $this->assertArrayHasKey($fileName, $this->downloads, sprintf('%s is not downloaded', $fileName));
 
         $callback = $callback ?: function () {
             return true;
@@ -195,7 +233,7 @@ class ExcelFake implements Exporter, Importer
         $disk         = $disk ?? 'default';
         $storedOnDisk = $this->stored[$disk] ?? [];
 
-        Assert::assertArrayHasKey(
+        $filePath = $this->assertArrayHasKey(
             $filePath,
             $storedOnDisk,
             sprintf('%s is not stored on disk %s', $filePath, $disk)
@@ -226,7 +264,7 @@ class ExcelFake implements Exporter, Importer
         $disk          = $disk ?? 'default';
         $queuedForDisk = $this->queued[$disk] ?? [];
 
-        Assert::assertArrayHasKey(
+        $filePath = $this->assertArrayHasKey(
             $filePath,
             $queuedForDisk,
             sprintf('%s is not queued for export on disk %s', $filePath, $disk)
@@ -257,7 +295,7 @@ class ExcelFake implements Exporter, Importer
         $disk           = $disk ?? 'default';
         $importedOnDisk = $this->imported[$disk] ?? [];
 
-        Assert::assertArrayHasKey(
+        $filePath = $this->assertArrayHasKey(
             $filePath,
             $importedOnDisk,
             sprintf('%s is not stored on disk %s', $filePath, $disk)
@@ -271,5 +309,34 @@ class ExcelFake implements Exporter, Importer
             $callback($importedOnDisk[$filePath]),
             "The file [{$filePath}] was not imported with the expected data."
         );
+    }
+
+    /**
+     * Asserts that an array has a specified key and returns the key if successful.
+     * @see matchByRegex for more information about file path matching
+     *
+     * @param string    $key
+     * @param array     $array
+     * @param string    $message
+     *
+     * @return string
+     *
+     * @throws ExpectationFailedException
+     * @throws \SebastianBergmann\RecursionContext\InvalidArgumentException
+     * @throws Exception
+     */
+    protected function assertArrayHasKey(string $key, array $disk, string $message = ''): string
+    {
+        if ($this->matchByRegex) {
+            $files   = array_keys($disk);
+            $results = preg_grep($key, $files);
+            Assert::assertGreaterThan(0, count($results), $message);
+            Assert::assertEquals(1, count($results), "More than one result matches the file name expression '$key'.");
+
+            return $results[0];
+        }
+        Assert::assertArrayHasKey($key, $disk, $message);
+
+        return $key;
     }
 }

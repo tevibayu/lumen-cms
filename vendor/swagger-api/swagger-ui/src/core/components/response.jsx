@@ -3,22 +3,15 @@ import PropTypes from "prop-types"
 import ImPropTypes from "react-immutable-proptypes"
 import cx from "classnames"
 import { fromJS, Seq, Iterable, List, Map } from "immutable"
-import { getSampleSchema, fromJSOrdered, stringify } from "core/utils"
+import { getExtensions, getSampleSchema, fromJSOrdered, stringify } from "core/utils"
 
-const getExampleComponent = ( sampleResponse, examples, HighlightCode ) => {
-  if ( examples && examples.size ) {
-    return examples.entrySeq().map( ([ key, example ]) => {
-      let exampleValue = stringify(example)
 
-      return (<div key={ key }>
-        <h5>{ key }</h5>
-        <HighlightCode className="example" value={ exampleValue } />
-      </div>)
-    }).toArray()
-  }
-
-  if ( sampleResponse ) { return <div>
-      <HighlightCode className="example" value={ sampleResponse } />
+const getExampleComponent = ( sampleResponse, HighlightCode, getConfigs ) => {
+  if (
+    sampleResponse !== undefined &&
+    sampleResponse !== null
+  ) { return <div>
+      <HighlightCode className="example" getConfigs={ getConfigs } value={ stringify(sampleResponse) } />
     </div>
   }
   return null
@@ -29,20 +22,24 @@ export default class Response extends React.Component {
     super(props, context)
 
     this.state = {
-      responseContentType: ""
+      responseContentType: "",
     }
   }
 
   static propTypes = {
+    path: PropTypes.string.isRequired,
+    method: PropTypes.string.isRequired,
     code: PropTypes.string.isRequired,
     response: PropTypes.instanceOf(Iterable),
     className: PropTypes.string,
     getComponent: PropTypes.func.isRequired,
     getConfigs: PropTypes.func.isRequired,
     specSelectors: PropTypes.object.isRequired,
+    oas3Actions: PropTypes.object.isRequired,
     specPath: ImPropTypes.list.isRequired,
     fn: PropTypes.object.isRequired,
     contentType: PropTypes.string,
+    activeExamplesKey: PropTypes.string,
     controlsAcceptHeader: PropTypes.bool,
     onContentTypeChange: PropTypes.func
   }
@@ -61,8 +58,21 @@ export default class Response extends React.Component {
     })
   }
 
+  getTargetExamplesKey = () => {
+    const { response, contentType, activeExamplesKey } = this.props
+
+    const activeContentType = this.state.responseContentType || contentType
+    const activeMediaType = response.getIn(["content", activeContentType], Map({}))
+    const examplesForMediaType = activeMediaType.get("examples", null)
+
+    const firstExamplesKey = examplesForMediaType.keySeq().first()
+    return activeExamplesKey || firstExamplesKey
+  }
+
   render() {
     let {
+      path,
+      method,
       code,
       response,
       className,
@@ -72,92 +82,167 @@ export default class Response extends React.Component {
       getConfigs,
       specSelectors,
       contentType,
-      controlsAcceptHeader
+      controlsAcceptHeader,
+      oas3Actions,
     } = this.props
 
     let { inferSchema } = fn
-    let { isOAS3 } = specSelectors
+    let isOAS3 = specSelectors.isOAS3()
+    const { showExtensions } = getConfigs()
 
+    let extensions = showExtensions ? getExtensions(response) : null
     let headers = response.get("headers")
-    let examples = response.get("examples")
     let links = response.get("links")
+    const ResponseExtension = getComponent("ResponseExtension")
     const Headers = getComponent("headers")
     const HighlightCode = getComponent("highlightCode")
     const ModelExample = getComponent("modelExample")
-    const Markdown = getComponent( "Markdown" )
+    const Markdown = getComponent("Markdown", true)
     const OperationLink = getComponent("operationLink")
     const ContentType = getComponent("contentType")
+    const ExamplesSelect = getComponent("ExamplesSelect")
+    const Example = getComponent("Example")
 
-    var sampleResponse
-    var sampleSchema
+
     var schema, specPathWithPossibleSchema
 
     const activeContentType = this.state.responseContentType || contentType
+    const activeMediaType = response.getIn(["content", activeContentType], Map({}))
+    const examplesForMediaType = activeMediaType.get("examples", null)
 
-    if(isOAS3()) {
-      const mediaType = response.getIn(["content", activeContentType], Map({}))
-      const oas3SchemaForContentType = mediaType.get("schema", Map({}))
+    // Goal: find a schema value for `schema`
+    if(isOAS3) {
+      const oas3SchemaForContentType = activeMediaType.get("schema")
 
-      if(mediaType.get("example") !== undefined) {
-        sampleSchema = stringify(mediaType.get("example"))
-      } else {
-        sampleSchema = getSampleSchema(oas3SchemaForContentType.toJS(), this.state.responseContentType, {
-          includeReadOnly: true
-        })
-      }
-      sampleResponse = oas3SchemaForContentType ? sampleSchema : null
       schema = oas3SchemaForContentType ? inferSchema(oas3SchemaForContentType.toJS()) : null
       specPathWithPossibleSchema = oas3SchemaForContentType ? List(["content", this.state.responseContentType, "schema"]) : specPath
     } else {
-      schema = inferSchema(response.toJS()) // TODO: don't convert back and forth. Lets just stick with immutable for inferSchema
+      schema = response.get("schema")
       specPathWithPossibleSchema = response.has("schema") ? specPath.push("schema") : specPath
-      sampleResponse = schema ? getSampleSchema(schema, activeContentType, {
-        includeReadOnly: true,
-        includeWriteOnly: true // writeOnly has no filtering effect in swagger 2.0
-       }) : null
     }
 
-    if(examples) {
-      examples = examples.map(example => {
-        // Remove unwanted properties from examples
-        return example.set ? example.set("$$ref", undefined) : example
-      })
+    let mediaTypeExample
+    let shouldOverrideSchemaExample = false
+    let sampleSchema
+    let sampleGenConfig = {
+      includeReadOnly: true
     }
 
-    let example = getExampleComponent( sampleResponse, examples, HighlightCode )
+    // Goal: find an example value for `sampleResponse`
+    if(isOAS3) {
+      sampleSchema = activeMediaType.get("schema", Map({})).toJS()
+      if(examplesForMediaType) {
+        const targetExamplesKey = this.getTargetExamplesKey()
+        mediaTypeExample = examplesForMediaType
+          .get(targetExamplesKey, Map({}))
+          .get("value")
+        if(mediaTypeExample === undefined) {
+          mediaTypeExample = examplesForMediaType.values().next().value
+        }
+        shouldOverrideSchemaExample = true
+      } else if(activeMediaType.get("example") !== undefined) {
+        // use the example key's value
+        mediaTypeExample = activeMediaType.get("example")
+        shouldOverrideSchemaExample = true
+      }
+    } else {
+      sampleSchema = schema
+      sampleGenConfig = {...sampleGenConfig, includeWriteOnly: true}
+      const oldOASMediaTypeExample = response.getIn(["examples", activeContentType])
+      if(oldOASMediaTypeExample) {
+        mediaTypeExample = oldOASMediaTypeExample
+        shouldOverrideSchemaExample = true
+      }
+    }
+
+    const sampleResponse = getSampleSchema(
+      sampleSchema,
+      activeContentType,
+      sampleGenConfig,
+      shouldOverrideSchemaExample ? mediaTypeExample : undefined
+    )
+
+    let example = getExampleComponent( sampleResponse, HighlightCode, getConfigs )
 
     return (
       <tr className={ "response " + ( className || "") } data-code={code}>
-        <td className="col response-col_status">
+        <td className="response-col_status">
           { code }
         </td>
-        <td className="col response-col_description">
+        <td className="response-col_description">
 
           <div className="response-col_description__inner">
             <Markdown source={ response.get( "description" ) } />
           </div>
 
-          { isOAS3 ?
-            <div className={cx("response-content-type", {
-              "controls-accept-header": controlsAcceptHeader
-            })}>
-              <ContentType
-                  value={this.state.responseContentType}
-                  contentTypes={ response.get("content") ? response.get("content").keySeq() : Seq() }
-                  onChange={this._onContentTypeChange}
-                  />
-                { controlsAcceptHeader ? <small>Controls <code>Accept</code> header.</small> : null }
-            </div>
-             : null }
+          { !showExtensions || !extensions.size ? null : extensions.map((v, key) => <ResponseExtension key={`${key}-${v}`} xKey={key} xVal={v} /> )}
 
-          { example ? (
+          {isOAS3 && response.get("content") ? (
+            <section className="response-controls">
+              <div
+                className={cx("response-control-media-type", {
+                  "response-control-media-type--accept-controller": controlsAcceptHeader
+                })}
+              >
+                <small className="response-control-media-type__title">
+                  Media type
+                </small>
+                <ContentType
+                  value={this.state.responseContentType}
+                  contentTypes={
+                    response.get("content")
+                      ? response.get("content").keySeq()
+                      : Seq()
+                  }
+                  onChange={this._onContentTypeChange}
+                />
+                {controlsAcceptHeader ? (
+                  <small className="response-control-media-type__accept-message">
+                    Controls <code>Accept</code> header.
+                  </small>
+                ) : null}
+              </div>
+              {examplesForMediaType ? (
+                <div className="response-control-examples">
+                  <small className="response-control-examples__title">
+                    Examples
+                  </small>
+                  <ExamplesSelect
+                    examples={examplesForMediaType}
+                    currentExampleKey={this.getTargetExamplesKey()}
+                    onSelect={key =>
+                      oas3Actions.setActiveExamplesMember({
+                        name: key,
+                        pathMethod: [path, method],
+                        contextType: "responses",
+                        contextName: code
+                      })
+                    }
+                    showLabels={false}
+                  />
+                </div>
+              ) : null}
+            </section>
+          ) : null}
+
+          { example || schema ? (
             <ModelExample
               specPath={specPathWithPossibleSchema}
               getComponent={ getComponent }
               getConfigs={ getConfigs }
               specSelectors={ specSelectors }
               schema={ fromJSOrdered(schema) }
-              example={ example }/>
+              example={ example }
+              includeReadOnly={ true }/>
+          ) : null }
+
+          { isOAS3 && examplesForMediaType ? (
+              <Example
+                example={examplesForMediaType.get(this.getTargetExamplesKey(), Map({}))}
+                getComponent={getComponent}
+                getConfigs={getConfigs}
+                omitValue={true}
+              />
           ) : null}
 
           { headers ? (
@@ -167,9 +252,8 @@ export default class Response extends React.Component {
             />
           ) : null}
 
-
         </td>
-        {specSelectors.isOAS3() ? <td className="col response-col_links">
+        {isOAS3 ? <td className="response-col_links">
           { links ?
             links.toSeq().map((link, key) => {
               return <OperationLink key={key} name={key} link={ link } getComponent={getComponent}/>

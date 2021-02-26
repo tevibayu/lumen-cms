@@ -1,6 +1,7 @@
 import { createSelector } from "reselect"
 import { sorters } from "core/utils"
 import { fromJS, Set, Map, OrderedMap, List } from "immutable"
+import { paramToIdentifier } from "../../utils"
 
 const DEFAULT_TAG = "default"
 
@@ -224,7 +225,10 @@ export const operationsWithRootInherited = createSelector(
 
 export const tags = createSelector(
   spec,
-  json => json.get("tags", List())
+  json => {
+    const tags = json.get("tags", List())
+    return List.isList(tags) ? tags.filter(tag => Map.isMap(tag)) : List()
+  }
 )
 
 export const tagDetails = (state, tag) => {
@@ -302,20 +306,19 @@ export const parameterWithMetaByIdentity = (state, pathMethod, param) => {
   const metaParams = state.getIn(["meta", "paths", ...pathMethod, "parameters"], OrderedMap())
 
   const mergedParams = opParams.map((currentParam) => {
-    const nameInKeyedMeta = metaParams.get(`${param.get("name")}.${param.get("in")}`)
-    const hashKeyedMeta = metaParams.get(`${param.get("name")}.${param.get("in")}.hash-${param.hashCode()}`)
+    const inNameKeyedMeta = metaParams.get(`${param.get("in")}.${param.get("name")}`)
+    const hashKeyedMeta = metaParams.get(`${param.get("in")}.${param.get("name")}.hash-${param.hashCode()}`)
     return OrderedMap().merge(
       currentParam,
-      nameInKeyedMeta,
+      inNameKeyedMeta,
       hashKeyedMeta
     )
   })
-
   return mergedParams.find(curr => curr.get("in") === param.get("in") && curr.get("name") === param.get("name"), OrderedMap())
 }
 
 export const parameterInclusionSettingFor = (state, pathMethod, paramName, paramIn) => {
-  const paramKey = `${paramName}.${paramIn}`
+  const paramKey = `${paramIn}.${paramName}`
   return state.getIn(["meta", "paths", ...pathMethod, "parameter_inclusions", paramKey], false)
 }
 
@@ -323,7 +326,6 @@ export const parameterInclusionSettingFor = (state, pathMethod, paramName, param
 export const parameterWithMeta = (state, pathMethod, paramName, paramIn) => {
   const opParams = specJsonWithResolvedSubtrees(state).getIn(["paths", ...pathMethod, "parameters"], OrderedMap())
   const currentParam = opParams.find(param => param.get("in") === paramIn && param.get("name") === paramName, OrderedMap())
-
   return parameterWithMetaByIdentity(state, pathMethod, currentParam)
 }
 
@@ -360,11 +362,10 @@ export const hasHost = createSelector(
 // Get the parameter values, that the user filled out
 export function parameterValues(state, pathMethod, isXml) {
   pathMethod = pathMethod || []
-  // let paramValues = state.getIn(["meta", "paths", ...pathMethod, "parameters"], fromJS([]))
   let paramValues = operationWithMeta(state, ...pathMethod).get("parameters", List())
   return paramValues.reduce( (hash, p) => {
     let value = isXml && p.get("in") === "body" ? p.get("value_xml") : p.get("value")
-    return hash.set(`${p.get("in")}.${p.get("name")}`, value)
+    return hash.set(paramToIdentifier(p, { allowHashes: false }), value)
   }, fromJS({}))
 }
 
@@ -489,6 +490,39 @@ export const validateBeforeExecute = ( state, pathMethod ) => {
   })
 
   return isValid
+}
+
+export const getOAS3RequiredRequestBodyContentType = (state, pathMethod) => {
+  let requiredObj = {
+    requestBody: false,
+    requestContentType: {}
+  }
+  let requestBody = state.getIn(["resolvedSubtrees", "paths", ...pathMethod, "requestBody"], fromJS([]))
+  if (requestBody.size < 1) {
+    return requiredObj
+  }
+  if (requestBody.getIn(["required"])) {
+    requiredObj.requestBody = requestBody.getIn(["required"])
+  }
+  requestBody.getIn(["content"]).entrySeq().forEach((contentType) => { // e.g application/json
+    const key = contentType[0]
+    if (contentType[1].getIn(["schema", "required"])) {
+      const val = contentType[1].getIn(["schema", "required"]).toJS()
+      requiredObj.requestContentType[key] = val
+    }
+  })
+  return requiredObj
+}
+
+export const isMediaTypeSchemaPropertiesEqual = ( state, pathMethod, currentMediaType, targetMediaType) => {
+  let requestBodyContent = state.getIn(["resolvedSubtrees", "paths", ...pathMethod, "requestBody", "content"], fromJS([]))
+  if (requestBodyContent.size < 2 || !currentMediaType || !targetMediaType) {
+    // nothing to compare
+    return false
+  }
+  let currentMediaTypeSchemaProperties = requestBodyContent.getIn([currentMediaType, "schema", "properties"], fromJS([]))
+  let targetMediaTypeSchemaProperties = requestBodyContent.getIn([targetMediaType, "schema", "properties"], fromJS([]))
+  return currentMediaTypeSchemaProperties.equals(targetMediaTypeSchemaProperties) ? true: false
 }
 
 function returnSelfOrNewMap(obj) {
